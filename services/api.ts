@@ -1,4 +1,4 @@
-import { Company, CompanyRating, User } from '../types';
+import { Company, CompanyRating, User, CreateRatingInput, UpdateRatingInput } from '../types';
 
 // Simulated API delay
 const API_DELAY = 300;
@@ -109,6 +109,19 @@ let ratings: CompanyRating[] = [
   }
 ];
 
+// Validation helpers
+function validateRatingValue(value: number): boolean {
+  return Number.isInteger(value) && value >= 1 && value <= 5;
+}
+
+function validateComment(comment: string): boolean {
+  return comment.trim().length >= 20;
+}
+
+function validateNickname(nickname?: string): boolean {
+  return !!nickname && nickname.trim().length > 0 && nickname.length <= 50;
+}
+
 // Helper to delay for simulated API
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -184,33 +197,53 @@ export const ratingService = {
     ) || null;
   },
 
-  async createRating(data: {
-    companyId: string;
-    userId?: string;
-    nickname?: string;
-    benefits: number;
-    environment: number;
-    leadership: number;
-    comment: string;
-  }): Promise<CompanyRating> {
+  async createRating(data: CreateRatingInput): Promise<CompanyRating> {
     await delay(API_DELAY);
     const { companyId, userId, nickname, benefits, environment, leadership, comment } = data;
 
-    // Check for existing rating
+    // Validate company exists
+    const company = companies.find(c => c.id === companyId);
+    if (!company) {
+      throw new Error('Company not found');
+    }
+
+    // Validate rating values
+    if (!validateRatingValue(benefits) || !validateRatingValue(environment) || !validateRatingValue(leadership)) {
+      throw new Error('Invalid rating values: each must be an integer between 1 and 5');
+    }
+
+    // Validate comment
+    if (!validateComment(comment)) {
+      throw new Error(`Comment must be at least 20 characters long`);
+    }
+
+    // Validate author identity
+    if (!userId && !nickname) {
+      throw new Error('Either userId or nickname is required');
+    }
+
+    // For anonymous, validate nickname
+    if (!userId && nickname) {
+      if (!validateNickname(nickname)) {
+        throw new Error('Invalid nickname: must be 1-50 characters');
+      }
+    }
+
+    // Check for existing rating (one active rating per user/company)
     const existing = await this.getUserRatingForCompany(companyId, userId, nickname);
     if (existing) {
-      throw new Error('User already has a rating for this company');
+      throw new Error('Bạn đã đánh giá công ty này. Vui lòng chỉnh sửa đánh giá hiện tại.');
     }
 
     const newRating: CompanyRating = {
       id: `r${Date.now()}`,
       companyId,
       userId,
-      nickname,
+      nickname: nickname?.trim(),
       benefits,
       environment,
       leadership,
-      comment,
+      comment: comment.trim(),
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -221,12 +254,7 @@ export const ratingService = {
 
   async updateRating(
     ratingId: string,
-    data: Partial<{
-      benefits: number;
-      environment: number;
-      leadership: number;
-      comment: string;
-    }>
+    data: UpdateRatingInput
   ): Promise<CompanyRating> {
     await delay(API_DELAY);
     const index = ratings.findIndex(r => r.id === ratingId);
@@ -234,8 +262,32 @@ export const ratingService = {
       throw new Error('Rating not found');
     }
 
+    const existing = ratings[index];
+
+    // Validate updates if present
+    if (data.benefits !== undefined) {
+      if (!validateRatingValue(data.benefits)) {
+        throw new Error('Invalid benefits rating: must be integer 1-5');
+      }
+    }
+    if (data.environment !== undefined) {
+      if (!validateRatingValue(data.environment)) {
+        throw new Error('Invalid environment rating: must be integer 1-5');
+      }
+    }
+    if (data.leadership !== undefined) {
+      if (!validateRatingValue(data.leadership)) {
+        throw new Error('Invalid leadership rating: must be integer 1-5');
+      }
+    }
+    if (data.comment !== undefined) {
+      if (!validateComment(data.comment)) {
+        throw new Error('Comment must be at least 20 characters long');
+      }
+    }
+
     ratings[index] = {
-      ...ratings[index],
+      ...existing,
       ...data,
       updatedAt: new Date()
     };

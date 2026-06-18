@@ -3,7 +3,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { CompanyCard } from '../components/CompanyCard';
 import { CompanyDrawer } from '../components/CompanyDrawer';
-import { Button } from '../components/UI';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { useCompanyStore, useUserStore } from '../store';
 import { Company } from '../types';
 
@@ -47,17 +49,21 @@ export default function HomePage() {
     return filtered;
   }, [companies, searchQuery, sortBy]);
 
+  const visibleCompanies = filteredCompanies();
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
+      <header className="sticky top-0 z-40 border-b bg-background/95 shadow-sm backdrop-blur">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <svg className="w-8 h-8 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-              </svg>
-              <h1 className="text-xl font-bold text-gray-900">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
+                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                </svg>
+              </div>
+              <h1 className="text-xl font-semibold tracking-tight">
                 Đánh Giá Công Ty Việt Nam
               </h1>
             </div>
@@ -65,7 +71,7 @@ export default function HomePage() {
             <div className="flex items-center gap-4">
               {user ? (
                 <div className="flex items-center gap-3">
-                  <span className="text-sm text-gray-600">
+                  <span className="text-sm text-muted-foreground">
                     Xin chào, {user.nickname}
                   </span>
                   <Button variant="ghost" size="sm" onClick={logout}>
@@ -73,7 +79,7 @@ export default function HomePage() {
                   </Button>
                 </div>
               ) : (
-                <Button variant="primary" size="sm">
+                <Button variant="default" size="sm">
                   Đăng nhập
                 </Button>
               )}
@@ -85,46 +91,49 @@ export default function HomePage() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Search and Filter Bar */}
-        <div className="mb-6 flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
-            <input
-              type="text"
-              placeholder="Tìm kiếm công ty theo tên, ngành nghề, hoặc địa điểm..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-          <div className="flex gap-2">
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as 'rating' | 'name' | 'reviews')}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white"
-            >
-              <option value="rating">Sắp xếp theo đánh giá</option>
-              <option value="name">Sắp xếp theo tên</option>
-              <option value="reviews">Sắp xếp theo số đánh giá</option>
-            </select>
-          </div>
-        </div>
+        <Card className="mb-8 py-4">
+          <CardContent className="flex flex-col gap-4 px-4 sm:flex-row">
+            <div className="flex-1">
+              <Input
+                type="search"
+                placeholder="Tìm kiếm công ty theo tên, ngành nghề, hoặc địa điểm..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                aria-label="Tìm kiếm công ty"
+              />
+            </div>
+            <div className="flex gap-2">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as 'rating' | 'name' | 'reviews')}
+                className="h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30"
+                aria-label="Sắp xếp công ty"
+              >
+                <option value="rating">Sắp xếp theo đánh giá</option>
+                <option value="name">Sắp xếp theo tên</option>
+                <option value="reviews">Sắp xếp theo số đánh giá</option>
+              </select>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Loading State */}
         {loading && (
           <div className="text-center py-12">
-            <svg className="animate-spin h-12 w-12 mx-auto text-blue-500" fill="none" viewBox="0 0 24 24">
+            <svg className="animate-spin h-12 w-12 mx-auto text-primary" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
             </svg>
-            <p className="mt-4 text-gray-600">Đang tải danh sách công ty...</p>
+            <p className="mt-4 text-muted-foreground">Đang tải danh sách công ty...</p>
           </div>
         )}
 
         {/* Error State */}
         {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-            <p className="text-red-600">{error}</p>
+          <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-4 text-center">
+            <p className="text-sm font-medium text-destructive">{error}</p>
             <Button
-              variant="primary"
+              variant="default"
               className="mt-3"
               onClick={fetchCompanies}
             >
@@ -136,13 +145,13 @@ export default function HomePage() {
         {/* Company Grid */}
         {!loading && !error && (
           <>
-            {filteredCompanies().length === 0 ? (
-              <div className="text-center py-12 text-gray-500">
+            {visibleCompanies.length === 0 ? (
+              <div className="rounded-xl border bg-card py-12 text-center text-muted-foreground shadow-sm">
                 <p>Không tìm thấy công ty nào.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {filteredCompanies().map((company) => (
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {visibleCompanies.map((company) => (
                   <CompanyCard
                     key={company.id}
                     company={company}
@@ -156,9 +165,9 @@ export default function HomePage() {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 mt-12">
+      <footer className="mt-12 border-t bg-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <p className="text-center text-sm text-gray-500">
+          <p className="text-center text-sm text-muted-foreground">
             © 2024 Đánh Giá Công Ty Việt Nam. Tất cả các đánh giá đều do người dùng đưa ra.
           </p>
         </div>

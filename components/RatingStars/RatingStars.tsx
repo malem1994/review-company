@@ -26,9 +26,9 @@ export const RatingStars: React.FC<RatingStarsProps> = ({
 
   const getStarColor = (starValue: number): string => {
     if (starValue <= value) {
-      return 'text-yellow-400 fill-current';
+      return 'text-amber-400 fill-current';
     }
-    return 'text-gray-300';
+    return 'text-muted-foreground/30';
   };
 
   return (
@@ -42,7 +42,7 @@ export const RatingStars: React.FC<RatingStarsProps> = ({
           className={`
             ${readonly ? 'cursor-default' : 'cursor-pointer hover:scale-110'}
             transition-transform duration-150
-            focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded
+            rounded focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-background
           `}
           aria-label={`Rate ${star} out of 5 stars`}
           aria-pressed={value === star}
@@ -57,10 +57,10 @@ export const RatingStars: React.FC<RatingStarsProps> = ({
         </button>
       ))}
       {showLabel && onChange && (
-        <span className="ml-2 text-sm font-medium text-gray-700">{value}/5</span>
+        <span className="ml-2 text-sm font-medium text-foreground">{value}/5</span>
       )}
       {readonly && showLabel && (
-        <span className="ml-2 text-sm font-medium text-gray-600">{value.toFixed(1)}</span>
+        <span className="ml-2 text-sm font-medium text-muted-foreground">{value.toFixed(1)}</span>
       )}
     </div>
   );
@@ -81,7 +81,7 @@ export const CategoryRating: React.FC<CategoryRatingProps> = ({
 }) => {
   return (
     <div className="flex items-center justify-between py-2">
-      <span className="text-sm font-medium text-gray-700">
+      <span className="text-sm font-medium text-foreground">
         {RATING_CATEGORIES[category]}
       </span>
       <RatingStars

@@ -1,0 +1,1 @@
+export { CompanyAvatar } from './CompanyAvatar';

@@ -5,13 +5,22 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Company, CompanyRating, MIN_COMMENT_LENGTH, RATING_CATEGORIES } from '../../types';
-import { useCompanyStore, useRatingStore, useUserStore } from '../../store';
-import { CompanyCard } from '../CompanyCard';
-import { RatingStars, CategoryRating } from '../RatingStars';
-import { Drawer, Button, Input, Textarea } from '../UI';
+import { useCompanyStore, useUserStore } from '../../store';
+import { CategoryRating } from '../RatingStars';
+import { Sheet } from '@/components/ui/sheet';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { CompanyAvatar } from '../CompanyAvatar';
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldLabel
+} from '@/components/ui/field';
 import {
   calculateAverageRating,
-  getRatingKey,
   getRatingColor,
   formatRatingDisplay
 } from '../../utils/rating';
@@ -22,18 +31,9 @@ const ratingSchema = z.object({
   benefits: z.number().min(1).max(5),
   environment: z.number().min(1).max(5),
   leadership: z.number().min(1).max(5),
-  comment: z.string().min(MIN_COMMENT_LENGTH, `Bình luận phải có ít nhất ${MIN_COMMENT_LENGTH} ký tự`),
-  nickname: z.string().min(1, 'Nickname là bắt buộc').max(50).optional()
-}).refine(
-  (data) => {
-    // For anonymous users, nickname is required
-    return !!data.nickname?.trim();
-  },
-  {
-    message: 'Nickname là bắt buộc cho người dùng ẩn danh',
-    path: ['nickname']
-  }
-);
+  comment: z.string().trim().min(MIN_COMMENT_LENGTH, `Bình luận phải có ít nhất ${MIN_COMMENT_LENGTH} ký tự`),
+  nickname: z.string().trim().max(50, 'Nickname không được quá 50 ký tự').optional()
+});
 
 type RatingFormData = z.infer<typeof ratingSchema>;
 
@@ -49,7 +49,6 @@ export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
   onClose
 }) => {
   const { user, isAuthenticated } = useUserStore();
-  const { userRatings } = useRatingStore();
   const { recalcCompanyAverage } = useCompanyStore();
 
   const [ratings, setRatings] = useState<CompanyRating[]>([]);
@@ -61,6 +60,7 @@ export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
     register,
     handleSubmit,
     reset,
+    setError,
     setValue,
     watch,
     formState: { errors }
@@ -135,6 +135,14 @@ export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
   const onSubmit = async (data: RatingFormData) => {
     if (!company) return;
 
+    if (!isAuthenticated && !data.nickname?.trim()) {
+      setError('nickname', {
+        type: 'manual',
+        message: 'Nickname là bắt buộc cho người dùng ẩn danh'
+      });
+      return;
+    }
+
     setSubmitting(true);
     try {
       const ratingData = {
@@ -187,31 +195,21 @@ export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
   const ratingColor = getRatingColor(company.averageRating);
 
   return (
-    <Drawer isOpen={isOpen} onClose={onClose} title={company.name}>
+    <Sheet isOpen={isOpen} onClose={onClose} title={company.name}>
       <div className="space-y-6">
         {/* Company Info */}
-        <div className="flex items-start gap-4 pb-4 border-b border-gray-200">
-          <div className="w-20 h-20 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 border border-gray-200">
-            {company.logo ? (
-              <img
-                src={company.logo}
-                alt={`${company.name} logo`}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-400 font-bold text-2xl">
-                {company.name.charAt(0)}
-              </div>
-            )}
-          </div>
+        <div className="flex items-start gap-4 border-b pb-5">
+          <CompanyAvatar name={company.name} logo={company.logo} size="lg" className="shadow-sm" />
           <div className="flex-1 min-w-0">
-            <h2 className="font-bold text-xl text-gray-900">{company.name}</h2>
+            <h2 className="text-xl font-semibold tracking-tight">{company.name}</h2>
             {company.industry && (
-              <p className="text-sm text-gray-500">{company.industry}</p>
+              <Badge variant="secondary" className="mt-2">
+                {company.industry}
+              </Badge>
             )}
             {company.location && (
-              <p className="text-sm text-gray-400 flex items-center mt-1">
-                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <p className="mt-2 flex items-center text-sm text-muted-foreground">
+                <svg className="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
@@ -219,7 +217,7 @@ export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
               </p>
             )}
             {company.description && (
-              <p className="text-sm text-gray-600 mt-2 line-clamp-3">
+              <p className="mt-3 line-clamp-3 text-sm text-muted-foreground">
                 {company.description}
               </p>
             )}
@@ -227,13 +225,13 @@ export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
         </div>
 
         {/* Rating Summary */}
-        <div className="flex items-center gap-4 bg-gray-50 p-4 rounded-lg">
+        <div className="flex flex-wrap items-center gap-4 rounded-xl border bg-muted/30 p-4">
           <div className="flex items-center gap-2">
             <div className="flex">
               {[1, 2, 3, 4, 5].map(star => (
                 <svg
                   key={star}
-                  className={`w-6 h-6 ${star <= Math.round(company.averageRating) ? 'text-yellow-400' : 'text-gray-300'}`}
+                  className={`h-6 w-6 ${star <= Math.round(company.averageRating) ? 'text-amber-400' : 'text-muted-foreground/30'}`}
                   viewBox="0 0 24 24"
                   fill="currentColor"
                 >
@@ -245,17 +243,17 @@ export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
               <span className={`text-2xl font-bold ${ratingColor.text}`}>
                 {formatRatingDisplay(company.averageRating)}
               </span>
-              <span className="text-sm text-gray-500 ml-1">trung bình</span>
+              <span className="ml-1 text-sm text-muted-foreground">trung bình</span>
             </div>
           </div>
-          <span className="text-sm text-gray-500">
+          <span className="text-sm text-muted-foreground">
             {company.reviewCount} đánh giá
           </span>
         </div>
 
         {/* Rating Form */}
-        <div className="border-t border-gray-200 pt-4">
-          <h3 className="font-semibold text-gray-900 mb-4">
+        <div className="border-t pt-5">
+          <h3 className="mb-4 font-semibold">
             {existingRating ? 'Chỉnh sửa đánh giá' : 'Thêm đánh giá của bạn'}
           </h3>
 
@@ -265,28 +263,28 @@ export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
               <CategoryRating
                 category="benefits"
                 value={formValues.benefits}
-                onChange={(v) => setValue('benefits', v)}
+                onChange={(v) => setValue('benefits', v, { shouldDirty: true, shouldValidate: true })}
               />
               <CategoryRating
                 category="environment"
                 value={formValues.environment}
-                onChange={(v) => setValue('environment', v)}
+                onChange={(v) => setValue('environment', v, { shouldDirty: true, shouldValidate: true })}
               />
               <CategoryRating
                 category="leadership"
                 value={formValues.leadership}
-                onChange={(v) => setValue('leadership', v)}
+                onChange={(v) => setValue('leadership', v, { shouldDirty: true, shouldValidate: true })}
               />
             </div>
 
             {errors.benefits && (
-              <p className="text-sm text-red-600">Vui lòng đánh giá tất cả các tiêu chí</p>
+              <p className="text-sm text-destructive">Vui lòng đánh giá tất cả các tiêu chí</p>
             )}
 
             {/* Preview Average */}
             {averageRating > 0 && (
               <div className="flex items-center gap-2 text-sm">
-                <span className="text-gray-600">Điểm trung bình:</span>
+                <span className="text-muted-foreground">Điểm trung bình:</span>
                 <span className={`font-bold ${getRatingColor(averageRating).text}`}>
                   {formatRatingDisplay(averageRating)}
                 </span>
@@ -295,28 +293,44 @@ export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
 
             {/* Nickname (for anonymous) */}
             {!isAuthenticated && (
-              <Input
-                label="Nickname"
-                placeholder="Nhập nickname của bạn"
-                {...register('nickname')}
-                error={errors.nickname?.message}
-                helperText="Nickname sẽ được hiển thị công khai"
-              />
+              <Field data-invalid={!!errors.nickname}>
+                <FieldLabel htmlFor="nickname">Nickname</FieldLabel>
+                <Input
+                  id="nickname"
+                  placeholder="Nhập nickname của bạn"
+                  aria-invalid={!!errors.nickname}
+                  {...register('nickname')}
+                />
+                {errors.nickname ? (
+                  <FieldError>{errors.nickname.message}</FieldError>
+                ) : (
+                  <FieldDescription>Nickname sẽ được hiển thị công khai</FieldDescription>
+                )}
+              </Field>
             )}
 
             {/* Comment */}
-            <Textarea
-              label="Bình luận"
-              placeholder={`Chia sẻ trải nghiệm của bạn tại ${company.name}... (tối thiểu ${MIN_COMMENT_LENGTH} ký tự)`}
-              {...register('comment')}
-              error={errors.comment?.message}
-              helperText={`${formValues.comment?.length || 0}/${MIN_COMMENT_LENGTH} ký tự`}
-            />
+            <Field data-invalid={!!errors.comment}>
+              <FieldLabel htmlFor="comment">Bình luận</FieldLabel>
+              <Textarea
+                id="comment"
+                placeholder={`Chia sẻ trải nghiệm của bạn tại ${company.name}... (tối thiểu ${MIN_COMMENT_LENGTH} ký tự)`}
+                aria-invalid={!!errors.comment}
+                {...register('comment')}
+              />
+              {errors.comment ? (
+                <FieldError>{errors.comment.message}</FieldError>
+              ) : (
+                <FieldDescription>
+                  {formValues.comment?.length || 0}/{MIN_COMMENT_LENGTH} ký tự
+                </FieldDescription>
+              )}
+            </Field>
 
             {/* Submit Button */}
             <Button
               type="submit"
-              variant="primary"
+              variant="default"
               loading={submitting}
               disabled={!formValues.comment ||
                         formValues.benefits === 0 ||
@@ -331,70 +345,70 @@ export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
         </div>
 
         {/* Comments Section */}
-        <div className="border-t border-gray-200 pt-4">
-          <h3 className="font-semibold text-gray-900 mb-4">
+        <div className="border-t pt-5">
+          <h3 className="mb-4 font-semibold">
             Tất cả đánh giá ({ratings.length})
           </h3>
 
           {loading ? (
-            <div className="text-center py-8 text-gray-500">
-              <svg className="animate-spin h-8 w-8 mx-auto text-blue-500" fill="none" viewBox="0 0 24 24">
+            <div className="py-8 text-center text-muted-foreground">
+              <svg className="mx-auto h-8 w-8 animate-spin text-primary" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
               </svg>
               <p className="mt-2">Đang tải...</p>
             </div>
           ) : ratings.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
+            <div className="rounded-xl border bg-muted/30 py-8 text-center text-muted-foreground">
               <p>Chưa có đánh giá nào cho công ty này.</p>
               <p className="text-sm mt-1">Hãy là người đầu tiên đánh giá!</p>
             </div>
           ) : (
             <div className="space-y-4">
               {ratings.map((rating) => (
-                <div key={rating.id} className="bg-gray-50 p-4 rounded-lg">
+                <div key={rating.id} className="rounded-xl border bg-card p-4 shadow-sm">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-gray-900">
+                      <span className="font-medium">
                         {rating.nickname || 'Người dùng ẩn danh'}
                       </span>
                       {!rating.userId && (
-                        <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">
+                        <Badge variant="secondary">
                           Ẩn danh
-                        </span>
+                        </Badge>
                       )}
                       {rating.userId && (
-                        <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">
+                        <Badge variant="outline" className="border-primary/20 text-primary">
                           Đã xác thực
-                        </span>
+                        </Badge>
                       )}
                     </div>
-                    <span className="text-sm text-gray-500">
+                    <span className="text-sm text-muted-foreground">
                       {formatDate(rating.createdAt)}
                     </span>
                   </div>
 
                   {/* Category Ratings */}
-                  <div className="grid grid-cols-3 gap-4 mb-3 text-sm">
+                  <div className="mb-3 grid grid-cols-1 gap-2 text-sm sm:grid-cols-3">
                     <div>
-                      <span className="text-gray-600">{RATING_CATEGORIES.benefits}:</span>
+                      <span className="text-muted-foreground">{RATING_CATEGORIES.benefits}:</span>
                       <span className="ml-1 font-medium">{rating.benefits}/5</span>
                     </div>
                     <div>
-                      <span className="text-gray-600">{RATING_CATEGORIES.environment}:</span>
+                      <span className="text-muted-foreground">{RATING_CATEGORIES.environment}:</span>
                       <span className="ml-1 font-medium">{rating.environment}/5</span>
                     </div>
                     <div>
-                      <span className="text-gray-600">{RATING_CATEGORIES.leadership}:</span>
+                      <span className="text-muted-foreground">{RATING_CATEGORIES.leadership}:</span>
                       <span className="ml-1 font-medium">{rating.leadership}/5</span>
                     </div>
                   </div>
 
                   {/* Overall Average */}
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-sm text-gray-600">Điểm trung bình:</span>
+                    <span className="text-sm text-muted-foreground">Điểm trung bình:</span>
                     <div className="flex items-center gap-1">
-                      <svg className="w-4 h-4 text-yellow-400" viewBox="0 0 24 24" fill="currentColor">
+                      <svg className="h-4 w-4 text-amber-400" viewBox="0 0 24 24" fill="currentColor">
                         <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                       </svg>
                       <span className={`font-bold text-sm ${getRatingColor(calculateAverageRating(rating)).text}`}>
@@ -404,13 +418,13 @@ export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
                   </div>
 
                   {/* Comment */}
-                  <p className="text-gray-700 text-sm whitespace-pre-wrap">
+                  <p className="whitespace-pre-wrap text-sm text-foreground/90">
                     {rating.comment}
                   </p>
 
                   {/* Edit indicator for current user */}
                   {existingRating?.id === rating.id && (
-                    <div className="mt-2 text-xs text-blue-600">
+                    <div className="mt-2 text-xs text-primary">
                       (Đây là đánh giá của bạn)
                     </div>
                   )}
@@ -420,6 +434,6 @@ export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
           )}
         </div>
       </div>
-    </Drawer>
+    </Sheet>
   );
 };

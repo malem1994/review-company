@@ -1,99 +1,24 @@
-import React from 'react';
+import * as React from 'react';
+import { cn } from '@/lib/utils';
 
-interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  label?: string;
-  error?: string;
-  helperText?: string;
-}
+export type InputProps = React.ComponentProps<'input'>;
 
-export const Input: React.FC<InputProps> = ({
-  label,
-  error,
-  helperText,
-  className = '',
-  id,
-  ...props
-}) => {
-  const inputId = id || `input-${Math.random().toString(36).substr(2, 9)}`;
+const Input = React.forwardRef<HTMLInputElement, InputProps>(
+  ({ className, type, ...props }, ref) => (
+    <input
+      ref={ref}
+      type={type}
+      data-slot="input"
+      className={cn(
+        'h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-xs transition-[color,box-shadow] outline-none selection:bg-primary selection:text-primary-foreground file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm dark:bg-input/30',
+        'focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50',
+        'aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40',
+        className
+      )}
+      {...props}
+    />
+  )
+);
+Input.displayName = 'Input';
 
-  return (
-    <div className="w-full">
-      {label && (
-        <label
-          htmlFor={inputId}
-          className="block text-sm font-medium text-gray-700 mb-1"
-        >
-          {label}
-        </label>
-      )}
-      <input
-        id={inputId}
-        className={`
-          block w-full rounded-lg border border-gray-300 px-3 py-2
-          text-gray-900 placeholder-gray-400
-          focus:border-blue-500 focus:ring-blue-500 focus:ring-1
-          disabled:bg-gray-100 disabled:cursor-not-allowed
-          ${error ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}
-          ${className}
-        `}
-        {...props}
-      />
-      {error && (
-        <p className="mt-1 text-sm text-red-600">{error}</p>
-      )}
-      {helperText && !error && (
-        <p className="mt-1 text-sm text-gray-500">{helperText}</p>
-      )}
-    </div>
-  );
-};
-
-interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
-  label?: string;
-  error?: string;
-  helperText?: string;
-}
-
-export const Textarea: React.FC<TextareaProps> = ({
-  label,
-  error,
-  helperText,
-  className = '',
-  id,
-  ...props
-}) => {
-  const textareaId = id || `textarea-${Math.random().toString(36).substr(2, 9)}`;
-
-  return (
-    <div className="w-full">
-      {label && (
-        <label
-          htmlFor={textareaId}
-          className="block text-sm font-medium text-gray-700 mb-1"
-        >
-          {label}
-        </label>
-      )}
-      <textarea
-        id={textareaId}
-        rows={4}
-        className={`
-          block w-full rounded-lg border border-gray-300 px-3 py-2
-          text-gray-900 placeholder-gray-400
-          focus:border-blue-500 focus:ring-blue-500 focus:ring-1
-          disabled:bg-gray-100 disabled:cursor-not-allowed
-          resize-none
-          ${error ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}
-          ${className}
-        `}
-        {...props}
-      />
-      {error && (
-        <p className="mt-1 text-sm text-red-600">{error}</p>
-      )}
-      {helperText && !error && (
-        <p className="mt-1 text-sm text-gray-500">{helperText}</p>
-      )}
-    </div>
-  );
-};
+export { Input };

@@ -26,12 +26,12 @@ export function getRatingColor(average: number): {
   text: string;
 } {
   if (average >= 4.0) {
-    return { bg: 'bg-green-100', text: 'text-green-700' };
+    return { bg: 'bg-emerald-50', text: 'text-emerald-600' };
   }
   if (average >= 3.0) {
-    return { bg: 'bg-amber-100', text: 'text-amber-700' };
+    return { bg: 'bg-amber-50', text: 'text-amber-600' };
   }
-  return { bg: 'bg-red-100', text: 'text-red-700' };
+  return { bg: 'bg-destructive/10', text: 'text-destructive' };
 }
 
 /**

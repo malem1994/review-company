@@ -67,3 +67,26 @@ export const RATING_COLORS = {
   medium: { bg: 'bg-amber-100', text: 'text-amber-700', min: 3.0 },
   low: { bg: 'bg-red-100', text: 'text-red-700', min: 0 }
 } as const;
+
+// Service input types
+export interface CreateRatingInput {
+  companyId: string;
+  userId?: string;
+  nickname?: string;
+  benefits: number;
+  environment: number;
+  leadership: number;
+  comment: string;
+}
+
+export interface UpdateRatingInput {
+  benefits?: number;
+  environment?: number;
+  leadership?: number;
+  comment?: string;
+}
+
+// Rating author type
+export type RatingAuthor =
+  | { type: 'user'; userId: string }
+  | { type: 'anonymous'; nickname: string };
