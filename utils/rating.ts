@@ -43,10 +43,8 @@ export function isValidRatingValue(value: number): boolean {
 
 /**
  * Generate a unique key for tracking user ratings per company
- * For anonymous: companyId + nickname
- * For authenticated: companyId + userId
+ * Now only supports authenticated users
  */
-export function getRatingKey(companyId: string, userId?: string, nickname?: string): string {
-  const identifier = userId || nickname;
-  return `${companyId}:${identifier || 'anonymous'}`;
+export function getRatingKey(companyId: string, userId: string): string {
+  return `${companyId}:${userId}`;
 }

@@ -15,12 +15,12 @@ export interface Company {
   updatedAt: Date;
 }
 
-// Rating categories (1-5 scale)
+// Rating model
 export interface CompanyRating {
   id: string;
   companyId: string;
-  userId?: string; // null for anonymous
-  nickname?: string; // Required for anonymous users
+  userId: string; // All ratings require authenticated user
+  displayName?: string; // From user profile
   benefits: number; // 1-5
   environment: number; // 1-5
   leadership: number; // 1-5
@@ -34,13 +34,6 @@ export interface RatingWithAverage extends CompanyRating {
   average: number; // (benefits + environment + leadership) / 3, rounded to 1 decimal
 }
 
-// User model
-export interface User {
-  id: string;
-  email: string;
-  nickname: string;
-  isAuthenticated: boolean;
-}
 
 // Form data for submitting a rating
 export interface RatingFormData {
@@ -48,7 +41,6 @@ export interface RatingFormData {
   environment: number;
   leadership: number;
   comment: string;
-  nickname?: string; // For anonymous users
 }
 
 // Validation
@@ -71,8 +63,7 @@ export const RATING_COLORS = {
 // Service input types
 export interface CreateRatingInput {
   companyId: string;
-  userId?: string;
-  nickname?: string;
+  userId: string;
   benefits: number;
   environment: number;
   leadership: number;
@@ -85,8 +76,3 @@ export interface UpdateRatingInput {
   leadership?: number;
   comment?: string;
 }
-
-// Rating author type
-export type RatingAuthor =
-  | { type: 'user'; userId: string }
-  | { type: 'anonymous'; nickname: string };

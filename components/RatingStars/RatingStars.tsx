@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { RATING_CATEGORIES } from '../../types';
 
 interface RatingStarsProps {
@@ -22,10 +22,12 @@ export const RatingStars: React.FC<RatingStarsProps> = ({
   size = 'md',
   showLabel = true
 }) => {
+  const [hoverValue, setHoverValue] = useState<number>(0);
   const stars = [1, 2, 3, 4, 5];
 
   const getStarColor = (starValue: number): string => {
-    if (starValue <= value) {
+    const displayValue = hoverValue || value;
+    if (starValue <= displayValue) {
       return 'text-amber-400 fill-current';
     }
     return 'text-muted-foreground/30';
@@ -38,14 +40,18 @@ export const RatingStars: React.FC<RatingStarsProps> = ({
           key={star}
           type="button"
           onClick={() => onChange?.(star)}
+          onMouseEnter={() => !readonly && setHoverValue(star)}
+          onMouseLeave={() => setHoverValue(0)}
           disabled={readonly}
           className={`
-            ${readonly ? 'cursor-default' : 'cursor-pointer hover:scale-110'}
-            transition-transform duration-150
-            rounded focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1 focus:ring-offset-background
+            ${readonly ? 'cursor-default' : 'cursor-pointer hover:scale-110 active:scale-95'}
+            transition-all duration-150
+            focus:outline-none
+            disabled:opacity-50
           `}
           aria-label={`Rate ${star} out of 5 stars`}
           aria-pressed={value === star}
+          tabIndex={readonly ? -1 : undefined}
         >
           <svg
             className={`${starSizes[size]} ${getStarColor(star)}`}

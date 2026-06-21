@@ -53,6 +53,25 @@
   overflow: hidden;
 }
 
+/* Toast bounce animation */
+@keyframes toast-bounce-in {
+  0% {
+    transform: translateY(-20px) scale(0.95);
+    opacity: 0;
+  }
+  50% {
+    transform: translateY(2px) scale(1.02);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.toast-enter {
+  animation: toast-bounce-in 0.4s ease-out forwards;
+}
+
 /* Smooth scrolling */
 html {
   scroll-behavior: smooth;

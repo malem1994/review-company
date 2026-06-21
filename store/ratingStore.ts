@@ -5,18 +5,18 @@ import { ratingService } from '../services/api';
 import { getRatingKey } from '../utils/rating';
 
 interface RatingStore {
-  // Track ratings by companyId:userId/nickname key
+  // Track ratings by companyId:userId key
   userRatings: Map<string, CompanyRating>;
   companyRatings: Map<string, CompanyRating[]>; // All ratings per company
 
   setUserRatings: (ratings: CompanyRating[]) => void;
-  getUserRating: (companyId: string, userId?: string, nickname?: string) => CompanyRating | undefined;
-  hasUserRated: (companyId: string, userId?: string, nickname?: string) => boolean;
+  getUserRating: (companyId: string, userId: string) => CompanyRating | undefined;
+  hasUserRated: (companyId: string, userId: string) => boolean;
   addRating: (rating: CompanyRating) => void;
   updateRating: (ratingId: string, updates: Partial<CompanyRating>) => void;
   removeRating: (ratingId: string) => void;
   setCompanyRatings: (companyId: string, ratings: CompanyRating[]) => void;
-  clearUserRating: (companyId: string, userId?: string, nickname?: string) => void;
+  clearUserRating: (companyId: string, userId: string) => void;
 }
 
 export const useRatingStore = create<RatingStore>()(
@@ -28,24 +28,24 @@ export const useRatingStore = create<RatingStore>()(
       setUserRatings: (ratings) => {
         const newMap = new Map<string, CompanyRating>();
         ratings.forEach(r => {
-          const key = getRatingKey(r.companyId, r.userId, r.nickname);
+          const key = getRatingKey(r.companyId, r.userId);
           newMap.set(key, r);
         });
         set({ userRatings: newMap });
       },
 
-      getUserRating: (companyId, userId, nickname) => {
-        const key = getRatingKey(companyId, userId, nickname);
+      getUserRating: (companyId, userId) => {
+        const key = getRatingKey(companyId, userId);
         return get().userRatings.get(key);
       },
 
-      hasUserRated: (companyId, userId, nickname) => {
-        const key = getRatingKey(companyId, userId, nickname);
+      hasUserRated: (companyId, userId) => {
+        const key = getRatingKey(companyId, userId);
         return get().userRatings.has(key);
       },
 
       addRating: (rating) => {
-        const key = getRatingKey(rating.companyId, rating.userId, rating.nickname);
+        const key = getRatingKey(rating.companyId, rating.userId);
         set((state) => {
           const newUserRatings = new Map(state.userRatings);
           newUserRatings.set(key, rating);
@@ -53,10 +53,7 @@ export const useRatingStore = create<RatingStore>()(
           const newCompanyRatings = new Map(state.companyRatings);
           const existing = newCompanyRatings.get(rating.companyId) || [];
           // Remove any existing rating from same user for this company
-          const filtered = existing.filter(
-            r => r.id !== rating.id &&
-                 !(r.userId === rating.userId || r.nickname === rating.nickname)
-          );
+          const filtered = existing.filter(r => r.id !== rating.id && r.userId !== rating.userId);
           newCompanyRatings.set(rating.companyId, [rating, ...filtered]);
 
           return { userRatings: newUserRatings, companyRatings: newCompanyRatings };
@@ -127,17 +124,15 @@ export const useRatingStore = create<RatingStore>()(
         });
       },
 
-      clearUserRating: (companyId, userId, nickname) => {
-        const key = getRatingKey(companyId, userId, nickname);
+      clearUserRating: (companyId, userId) => {
+        const key = getRatingKey(companyId, userId);
         set((state) => {
           const newUserRatings = new Map(state.userRatings);
           newUserRatings.delete(key);
 
           const newCompanyRatings = new Map(state.companyRatings);
           const existing = newCompanyRatings.get(companyId) || [];
-          const filtered = existing.filter(
-            r => !(r.userId === userId || r.nickname === nickname)
-          );
+          const filtered = existing.filter(r => r.userId !== userId);
           newCompanyRatings.set(companyId, filtered);
 
           return { userRatings: newUserRatings, companyRatings: newCompanyRatings };
