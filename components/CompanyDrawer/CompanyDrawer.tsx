@@ -105,7 +105,7 @@ export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
       const existing = await ratingService.getUserRatingForCompany(
         company.id,
         isAuthenticated ? user?.id : undefined,
-        !isAuthenticated ? watch('nickname') : undefined
+        isAuthenticated ? user?.nickname : watch('nickname')
       );
       if (existing) {
         setExistingRating(existing);
@@ -123,7 +123,7 @@ export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
     } catch (error) {
       console.error('Failed to check existing rating:', error);
     }
-  }, [company, isAuthenticated, user?.id, watch, setValue, reset]);
+  }, [company, isAuthenticated, user?.id, user?.nickname, watch, setValue, reset]);
 
   useEffect(() => {
     if (isOpen && company) {
@@ -148,7 +148,7 @@ export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
       const ratingData = {
         companyId: company.id,
         userId: isAuthenticated ? user?.id : undefined,
-        nickname: isAuthenticated ? undefined : data.nickname?.trim(),
+        nickname: isAuthenticated ? user?.nickname : data.nickname?.trim(),
         benefits: data.benefits,
         environment: data.environment,
         leadership: data.leadership,

@@ -1,185 +1,107 @@
 import { Company, CompanyRating, User, CreateRatingInput, UpdateRatingInput } from '../types';
+import { createClient } from '../utils/supabase/client';
 
-// Simulated API delay
-const API_DELAY = 300;
+const supabase = createClient();
 
-// Mock data storage (in-memory)
-let companies: Company[] = [
-  {
-    id: '1',
-    name: 'Techcombank',
-    logo: 'https://via.placeholder.com/80x80?text=TCB',
-    slug: 'techcombank',
-    description: 'Ngân hàng TMCP Kỹ Thương Việt Nam - một trong những ngân hàng hàng đầu tại Việt Nam',
-    industry: 'Ngân hàng / Tài chính',
-    location: 'Hà Nội',
-    averageRating: 4.2,
-    reviewCount: 1250,
-    createdAt: new Date('2023-01-15'),
-    updatedAt: new Date('2024-06-01')
-  },
-  {
-    id: '2',
-    name: 'VNPT',
-    logo: 'https://via.placeholder.com/80x80?text=VNPT',
-    slug: 'vnpt',
-    description: 'Tập đoàn Bưu chính Viễn thông Việt Nam - nhà cung cấp dịch vụ viễn thông hàng đầu',
-    industry: 'Viễn thông',
-    location: 'Hà Nội',
-    averageRating: 3.8,
-    reviewCount: 890,
-    createdAt: new Date('2023-02-20'),
-    updatedAt: new Date('2024-05-15')
-  },
-  {
-    id: '3',
-    name: 'VinGroup',
-    logo: 'https://via.placeholder.com/80x80?text=VNG',
-    slug: 'vingroup',
-    description: 'Tập đoàn tư nhân lớn nhất Việt Nam với nhiều lĩnh vực: bất động sản, ô tô, bán lẻ',
-    industry: 'Đa ngành',
-    location: 'Vinhomes Riverside, Hà Nội',
-    averageRating: 3.5,
-    reviewCount: 2100,
-    createdAt: new Date('2023-01-10'),
-    updatedAt: new Date('2024-06-10')
-  },
-  {
-    id: '4',
-    name: 'FPT Software',
-    logo: 'https://via.placeholder.com/80x80?text=FPT',
-    slug: 'fpt-software',
-    description: 'Công ty phần mềm hàng đầu Việt Nam với dịch vụ outsourcing và sản phẩm công nghệ',
-    industry: 'Công nghệ thông tin',
-    location: 'Quận 7, TP.HCM',
-    averageRating: 4.5,
-    reviewCount: 560,
-    createdAt: new Date('2023-03-05'),
-    updatedAt: new Date('2024-06-12')
-  },
-  {
-    id: '5',
-    name: 'MoMo',
-    logo: 'https://via.placeholder.com/80x80?text=MoMo',
-    slug: 'momo',
-    description: 'Ví điện tử và nền tảng fintech phổ biến nhất Việt Nam',
-    industry: 'Fintech',
-    location: 'TP.HCM',
-    averageRating: 4.0,
-    reviewCount: 3200,
-    createdAt: new Date('2023-02-01'),
-    updatedAt: new Date('2024-06-08')
-  }
-];
-
-let ratings: CompanyRating[] = [
-  {
-    id: 'r1',
-    companyId: '1',
-    userId: 'u1',
-    benefits: 5,
-    environment: 4,
-    leadership: 4,
-    comment: 'Môi trường làm việc rất tốt, phúc lợi hấp dẫn. Lương thưởng cạnh tranh và có nhiều cơ hội phát triển career.',
-    createdAt: new Date('2024-05-20'),
-    updatedAt: new Date('2024-05-20')
-  },
-  {
-    id: 'r2',
-    companyId: '1',
-    userId: undefined,
-    nickname: 'AnonUser123',
-    benefits: 4,
-    environment: 4,
-    leadership: 5,
-    comment: 'Công ty có văn hóa tốt, lãnh đạo thân thiện và lắng nghe nhân viên. Tuy nhiên áp lực công việc đôi khi cao.',
-    createdAt: new Date('2024-06-01'),
-    updatedAt: new Date('2024-06-01')
-  },
-  {
-    id: 'r3',
-    companyId: '4',
-    userId: 'u2',
-    benefits: 5,
-    environment: 5,
-    leadership: 4,
-    comment: 'Great company with excellent work-life balance. Modern tech stack and supportive management team.',
-    createdAt: new Date('2024-05-15'),
-    updatedAt: new Date('2024-05-15')
-  }
-];
-
-// Validation helpers
-function validateRatingValue(value: number): boolean {
-  return Number.isInteger(value) && value >= 1 && value <= 5;
+// Helper to map DB company to Company type
+function mapCompanyFromDB(dbCompany: any): Company {
+  return {
+    id: dbCompany.id,
+    name: dbCompany.name,
+    logo: dbCompany.logo || '',
+    slug: dbCompany.slug,
+    description: dbCompany.description || undefined,
+    industry: dbCompany.industry || undefined,
+    location: dbCompany.location || undefined,
+    averageRating: dbCompany.average_rating ? Number(dbCompany.average_rating) : 0,
+    reviewCount: dbCompany.review_count ? Number(dbCompany.review_count) : 0,
+    createdAt: new Date(dbCompany.created_at),
+    updatedAt: new Date(dbCompany.updated_at)
+  };
 }
 
-function validateComment(comment: string): boolean {
-  return comment.trim().length >= 20;
+// Helper to map DB rating to CompanyRating type
+function mapRatingFromDB(dbRating: any): CompanyRating {
+  return {
+    id: dbRating.id,
+    companyId: dbRating.company_id,
+    userId: dbRating.user_id || undefined,
+    nickname: dbRating.nickname || undefined,
+    benefits: dbRating.benefits,
+    environment: dbRating.environment,
+    leadership: dbRating.leadership,
+    comment: dbRating.comment,
+    createdAt: new Date(dbRating.created_at),
+    updatedAt: new Date(dbRating.updated_at)
+  };
 }
 
-function validateNickname(nickname?: string): boolean {
-  return !!nickname && nickname.trim().length > 0 && nickname.length <= 50;
-}
-
-// Helper to delay for simulated API
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-// Company API
+// Company API using Supabase
 export const companyService = {
   async getAllCompanies(): Promise<Company[]> {
-    await delay(API_DELAY);
-    return [...companies];
+    const { data, error } = await supabase
+      .from('companies')
+      .select('*')
+      .order('name');
+
+    if (error) {
+      throw new Error(`Failed to fetch companies: ${error.message}`);
+    }
+
+    return (data || []).map(mapCompanyFromDB);
   },
 
   async getCompanyById(id: string): Promise<Company | null> {
-    await delay(API_DELAY / 2);
-    return companies.find(c => c.id === id) || null;
+    const { data, error } = await supabase
+      .from('companies')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') return null; // Record not found
+      throw new Error(`Failed to fetch company by ID: ${error.message}`);
+    }
+
+    return data ? mapCompanyFromDB(data) : null;
   },
 
   async getCompanyBySlug(slug: string): Promise<Company | null> {
-    await delay(API_DELAY / 2);
-    return companies.find(c => c.slug === slug) || null;
+    const { data, error } = await supabase
+      .from('companies')
+      .select('*')
+      .eq('slug', slug)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') return null; // Record not found
+      throw new Error(`Failed to fetch company by slug: ${error.message}`);
+    }
+
+    return data ? mapCompanyFromDB(data) : null;
   },
 
   async recalcCompanyAverage(companyId: string): Promise<Company | null> {
-    await delay(API_DELAY / 2);
-    const companyRatings = ratings.filter(r => r.companyId === companyId);
-    if (companyRatings.length === 0) {
-      const company = companies.find(c => c.id === companyId);
-      if (company) {
-        company.averageRating = 0;
-        company.reviewCount = 0;
-        return { ...company };
-      }
-      return null;
-    }
-
-    const sum = companyRatings.reduce((acc, r) => acc + r.benefits + r.environment + r.leadership, 0);
-    const avg = (sum / (companyRatings.length * 3));
-    const roundedAvg = Math.round(avg * 10) / 10;
-
-    const companyIndex = companies.findIndex(c => c.id === companyId);
-    if (companyIndex === -1) return null;
-
-    companies[companyIndex] = {
-      ...companies[companyIndex],
-      averageRating: roundedAvg,
-      reviewCount: companyRatings.length,
-      updatedAt: new Date()
-    };
-
-    return { ...companies[companyIndex] };
+    // In Supabase, the DB triggers handle updating the average rating and count on write.
+    // So we just fetch the updated company details.
+    return this.getCompanyById(companyId);
   }
 };
 
-// Rating API
+// Rating API using Supabase
 export const ratingService = {
   async getRatingsByCompany(companyId: string): Promise<CompanyRating[]> {
-    await delay(API_DELAY / 2);
-    return ratings
-      .filter(r => r.companyId === companyId)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const { data, error } = await supabase
+      .from('company_ratings')
+      .select('*')
+      .eq('company_id', companyId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw new Error(`Failed to fetch ratings: ${error.message}`);
+    }
+
+    return (data || []).map(mapRatingFromDB);
   },
 
   async getUserRatingForCompany(
@@ -187,128 +109,107 @@ export const ratingService = {
     userId?: string,
     nickname?: string
   ): Promise<CompanyRating | null> {
-    await delay(API_DELAY / 4);
-    const identifier = userId || nickname;
+    const identifier = nickname || userId;
     if (!identifier) return null;
 
-    return ratings.find(
-      r => r.companyId === companyId &&
-           (userId ? r.userId === userId : r.nickname === nickname)
-    ) || null;
+    let query = supabase
+      .from('company_ratings')
+      .select('*')
+      .eq('company_id', companyId);
+
+    // If nickname is available, check by nickname. Otherwise, use userId.
+    if (nickname) {
+      query = query.eq('nickname', nickname);
+    } else {
+      query = query.eq('user_id', userId);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      throw new Error(`Failed to check existing user rating: ${error.message}`);
+    }
+
+    return data && data.length > 0 ? mapRatingFromDB(data[0]) : null;
   },
 
   async createRating(data: CreateRatingInput): Promise<CompanyRating> {
-    await delay(API_DELAY);
-    const { companyId, userId, nickname, benefits, environment, leadership, comment } = data;
+    const { companyId, nickname, benefits, environment, leadership, comment } = data;
 
-    // Validate company exists
-    const company = companies.find(c => c.id === companyId);
-    if (!company) {
-      throw new Error('Company not found');
+    if (!comment || comment.trim().length < 20) {
+      throw new Error('Bình luận phải có ít nhất 20 ký tự');
     }
 
-    // Validate rating values
-    if (!validateRatingValue(benefits) || !validateRatingValue(environment) || !validateRatingValue(leadership)) {
-      throw new Error('Invalid rating values: each must be an integer between 1 and 5');
-    }
-
-    // Validate comment
-    if (!validateComment(comment)) {
-      throw new Error(`Comment must be at least 20 characters long`);
-    }
-
-    // Validate author identity
-    if (!userId && !nickname) {
-      throw new Error('Either userId or nickname is required');
-    }
-
-    // For anonymous, validate nickname
-    if (!userId && nickname) {
-      if (!validateNickname(nickname)) {
-        throw new Error('Invalid nickname: must be 1-50 characters');
-      }
-    }
-
-    // Check for existing rating (one active rating per user/company)
-    const existing = await this.getUserRatingForCompany(companyId, userId, nickname);
-    if (existing) {
-      throw new Error('Bạn đã đánh giá công ty này. Vui lòng chỉnh sửa đánh giá hiện tại.');
-    }
-
-    const newRating: CompanyRating = {
-      id: `r${Date.now()}`,
-      companyId,
-      userId,
-      nickname: nickname?.trim(),
+    // Since we don't have real auth yet, we store user_id as null
+    // and rely on the nickname to satisfy the anonymous policy.
+    const insertData = {
+      company_id: companyId,
+      user_id: null,
+      nickname: nickname || 'Người dùng ẩn danh',
       benefits,
       environment,
       leadership,
-      comment: comment.trim(),
-      createdAt: new Date(),
-      updatedAt: new Date()
+      comment: comment.trim()
     };
 
-    ratings.push(newRating);
-    return newRating;
+    const { data: inserted, error } = await supabase
+      .from('company_ratings')
+      .insert(insertData)
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to submit rating: ${error.message}`);
+    }
+
+    return mapRatingFromDB(inserted);
   },
 
   async updateRating(
     ratingId: string,
     data: UpdateRatingInput
   ): Promise<CompanyRating> {
-    await delay(API_DELAY);
-    const index = ratings.findIndex(r => r.id === ratingId);
-    if (index === -1) {
-      throw new Error('Rating not found');
-    }
-
-    const existing = ratings[index];
-
-    // Validate updates if present
-    if (data.benefits !== undefined) {
-      if (!validateRatingValue(data.benefits)) {
-        throw new Error('Invalid benefits rating: must be integer 1-5');
-      }
-    }
-    if (data.environment !== undefined) {
-      if (!validateRatingValue(data.environment)) {
-        throw new Error('Invalid environment rating: must be integer 1-5');
-      }
-    }
-    if (data.leadership !== undefined) {
-      if (!validateRatingValue(data.leadership)) {
-        throw new Error('Invalid leadership rating: must be integer 1-5');
-      }
-    }
+    const updateData: any = {};
+    if (data.benefits !== undefined) updateData.benefits = data.benefits;
+    if (data.environment !== undefined) updateData.environment = data.environment;
+    if (data.leadership !== undefined) updateData.leadership = data.leadership;
     if (data.comment !== undefined) {
-      if (!validateComment(data.comment)) {
-        throw new Error('Comment must be at least 20 characters long');
+      if (data.comment.trim().length < 20) {
+        throw new Error('Bình luận phải có ít nhất 20 ký tự');
       }
+      updateData.comment = data.comment.trim();
     }
 
-    ratings[index] = {
-      ...existing,
-      ...data,
-      updatedAt: new Date()
-    };
+    const { data: updated, error } = await supabase
+      .from('company_ratings')
+      .update(updateData)
+      .eq('id', ratingId)
+      .select()
+      .single();
 
-    return ratings[index];
+    if (error) {
+      throw new Error(`Failed to update rating: ${error.message}`);
+    }
+
+    return mapRatingFromDB(updated);
   },
 
   async deleteRating(ratingId: string): Promise<void> {
-    await delay(API_DELAY / 2);
-    const index = ratings.findIndex(r => r.id === ratingId);
-    if (index !== -1) {
-      ratings.splice(index, 1);
+    const { error } = await supabase
+      .from('company_ratings')
+      .delete()
+      .eq('id', ratingId);
+
+    if (error) {
+      throw new Error(`Failed to delete rating: ${error.message}`);
     }
   }
 };
 
-// User API (mock)
+// User API (mock remains for frontend session demonstration)
 export const userService = {
   async login(email: string, password: string): Promise<User> {
-    await delay(API_DELAY);
-    // Mock login - in real app would authenticate
+    // Simulating network delay for mock login
+    await new Promise(resolve => setTimeout(resolve, 300));
     return {
       id: `u${Date.now()}`,
       email,
@@ -318,9 +219,6 @@ export const userService = {
   },
 
   async logout(): Promise<void> {
-    await delay(API_DELAY / 4);
-    // Mock logout - just clears local state
+    await new Promise(resolve => setTimeout(resolve, 100));
   }
 };
-
-export type { Company, CompanyRating, User };
