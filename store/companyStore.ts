@@ -11,6 +11,7 @@ interface CompanyStore {
   fetchCompanyById: (id: string) => Promise<Company | null>;
   fetchCompanyBySlug: (slug: string) => Promise<Company | null>;
   recalcCompanyAverage: (companyId: string) => Promise<void>;
+  updateCompany: (updated: Company) => void;
 }
 
 export const useCompanyStore = create<CompanyStore>()(
@@ -61,6 +62,14 @@ export const useCompanyStore = create<CompanyStore>()(
         } catch (error) {
           set({ error: (error as Error).message });
         }
+      },
+
+      updateCompany: (updated: Company) => {
+        set((state) => ({
+          companies: state.companies.map(c =>
+            c.id === updated.id ? updated : c
+          )
+        }));
       }
     }),
     {

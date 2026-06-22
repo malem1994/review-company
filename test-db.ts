@@ -19,26 +19,51 @@ async function testDB() {
   // Test ratings
   const { data: ratings, error: ratingsError } = await supabase
     .from('company_ratings')
-    .select(`
-      *,
-      profiles (display_name)
-    `);
+    .select('*')
+    .order('created_at', { ascending: false });
 
   if (ratingsError) {
     console.error('Failed to fetch ratings:', ratingsError);
   } else {
-    console.log('Ratings with profiles:', ratings);
+    console.log('Ratings count:', ratings.length);
+
+    if (ratings.length > 0) {
+      const userIds = [...new Set(ratings.map(r => r.user_id).filter(Boolean))];
+      const { data: users } = await supabase
+        .from('users')
+        .select('id, display_name')
+        .in('id', userIds);
+
+      const userMap = new Map(users?.map(u => [u.id, u.display_name]) || []);
+
+      const ratingsWithNames = ratings.map(rating => ({
+        ...rating,
+        displayName: rating.user_id ? userMap.get(rating.user_id) || undefined : undefined
+      }));
+      console.log('Ratings with display names:', JSON.stringify(ratingsWithNames, null, 2));
+    }
   }
 
-  // Test profiles
-  const { data: profiles, error: profilesError } = await supabase
-    .from('profiles')
+  // Test users
+  const { data: users, error: usersError } = await supabase
+    .from('users')
     .select('*');
 
-  if (profilesError) {
-    console.error('Failed to fetch profiles:', profilesError);
+  if (usersError) {
+    console.error('Failed to fetch users:', usersError);
   } else {
-    console.log('Profiles:', profiles);
+    console.log('Users:', users);
+  }
+
+  // Test roles
+  const { data: roles, error: rolesError } = await supabase
+    .from('roles')
+    .select('*');
+
+  if (rolesError) {
+    console.error('Failed to fetch roles:', rolesError);
+  } else {
+    console.log('Roles:', roles);
   }
 
   process.exit(0);

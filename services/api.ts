@@ -1,5 +1,6 @@
 import { Company, CompanyRating, CreateRatingInput, UpdateRatingInput } from '../types';
 import { createClient } from '../utils/supabase/client';
+import { storageService } from '../utils/storage/storage';
 
 const supabase = createClient();
 
@@ -70,6 +71,71 @@ export const companyService = {
     // In Supabase, the DB triggers handle updating the average rating and count on write.
     // So we just fetch the updated company details.
     return this.getCompanyById(companyId);
+  },
+
+  /**
+   * Upload and update company logo
+   * @param companyId - Company ID
+   * @param file - Image file to upload
+   * @returns Updated company with new logo URL
+   */
+  async updateCompanyLogo(companyId: string, file: File): Promise<Company> {
+    // Get current company to find old logo path
+    const currentCompany = await this.getCompanyById(companyId);
+    const oldLogoPath = currentCompany?.logo || '';
+
+    // Upload new logo to storage
+    const { path: newStoragePath, url: newLogoUrl } = await storageService.uploadLogo(file, companyId);
+
+    // Update company with new logo URL
+    const { data: updated, error } = await supabase
+      .from('companies')
+      .update({ logo: newStoragePath })
+      .eq('id', companyId)
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error(`Failed to update company logo: ${error.message}`);
+    }
+
+    // Delete old logo if exists and is a storage path (not external URL)
+    if (oldLogoPath && oldLogoPath.startsWith('logos/') && oldLogoPath !== newStoragePath) {
+      try {
+        await storageService.deleteLogo(oldLogoPath);
+      } catch (err) {
+        console.error('Failed to delete old logo:', err);
+        // Don't throw - continue even if delete fails
+      }
+    }
+
+    return mapCompanyFromDB(updated);
+  },
+
+  /**
+   * Delete company logo
+   * @param companyId - Company ID
+   */
+  async deleteCompanyLogo(companyId: string): Promise<void> {
+    const company = await this.getCompanyById(companyId);
+    const logoPath = company?.logo || '';
+
+    if (!logoPath || !logoPath.startsWith('logos/')) {
+      throw new Error('No storage logo to delete');
+    }
+
+    // Delete from storage
+    await storageService.deleteLogo(logoPath);
+
+    // Update company record
+    const { error } = await supabase
+      .from('companies')
+      .update({ logo: null })
+      .eq('id', companyId);
+
+    if (error) {
+      throw new Error(`Failed to delete company logo: ${error.message}`);
+    }
   }
 };
 
@@ -92,18 +158,18 @@ export const ratingService = {
 
     // Fetch all user profiles in batch for these ratings
     const userIds = [...new Set(ratings.map(r => r.user_id).filter(Boolean))];
-    const { data: profiles } = await supabase
-      .from('profiles')
+    const { data: users } = await supabase
+      .from('users')
       .select('id, display_name')
       .in('id', userIds);
 
-    const profileMap = new Map(profiles?.map(p => [p.id, p.display_name]) || []);
+    const userMap = new Map(users?.map(u => [u.id, u.display_name]) || []);
 
     return ratings.map(rating => ({
       id: rating.id,
       companyId: rating.company_id,
       userId: rating.user_id,
-      displayName: rating.user_id ? profileMap.get(rating.user_id) || undefined : undefined,
+      displayName: rating.user_id ? userMap.get(rating.user_id) || undefined : undefined,
       benefits: rating.benefits,
       environment: rating.environment,
       leadership: rating.leadership,
@@ -131,9 +197,9 @@ export const ratingService = {
 
     if (!data) return null;
 
-    // Fetch profile for this user
-    const { data: profile } = await supabase
-      .from('profiles')
+    // Fetch user profile for this user
+    const { data: user } = await supabase
+      .from('users')
       .select('display_name')
       .eq('id', userId)
       .single();
@@ -142,7 +208,7 @@ export const ratingService = {
       id: data.id,
       companyId: data.company_id,
       userId: data.user_id,
-      displayName: profile?.display_name || undefined,
+      displayName: user?.display_name || undefined,
       benefits: data.benefits,
       environment: data.environment,
       leadership: data.leadership,
@@ -183,9 +249,9 @@ export const ratingService = {
       throw new Error(`Không thể gửi đánh giá: ${error.message}`);
     }
 
-    // Fetch profile for the user
-    const { data: profile } = await supabase
-      .from('profiles')
+    // Fetch user profile for the user
+    const { data: user } = await supabase
+      .from('users')
       .select('display_name')
       .eq('id', userId)
       .single();
@@ -194,7 +260,7 @@ export const ratingService = {
       id: inserted.id,
       companyId: inserted.company_id,
       userId: inserted.user_id,
-      displayName: profile?.display_name || undefined,
+      displayName: user?.display_name || undefined,
       benefits: inserted.benefits,
       environment: inserted.environment,
       leadership: inserted.leadership,
@@ -230,15 +296,15 @@ export const ratingService = {
       throw new Error(`Failed to update rating: ${error.message}`);
     }
 
-    // Fetch profile for the user if available
+    // Fetch user profile for the user if available
     let displayName: string | undefined;
     if (updated.user_id) {
-      const { data: profile } = await supabase
-        .from('profiles')
+      const { data: user } = await supabase
+        .from('users')
         .select('display_name')
         .eq('id', updated.user_id)
         .single();
-      displayName = profile?.display_name || undefined;
+      displayName = user?.display_name || undefined;
     }
 
     return {

@@ -25,6 +25,7 @@ import {
   formatRatingDisplay
 } from '../../utils/rating';
 import { ratingService } from '../../services/api';
+import { companyService } from '../../services/api';
 
 // Validation schema - nickname not needed since login required
 const ratingSchema = z.object({
@@ -41,6 +42,8 @@ interface CompanyDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   onLoginClick?: () => void;
+  /** Callback when company data is updated */
+  onCompanyUpdate?: (updatedCompany: Company) => void;
 }
 
 export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
@@ -55,6 +58,7 @@ export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
   const [ratings, setRatings] = useState<CompanyRating[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [existingRating, setExistingRating] = useState<CompanyRating | null>(null);
   const [viewMode, setViewMode] = useState<'default' | 'form'>('default');
   const [error, setError] = useState<string | null>(null);
@@ -181,6 +185,33 @@ export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
     }
   };
 
+  const handleLogoUpload = async (file: File) => {
+    if (!company) return;
+    if (!isAuthenticated) {
+      alert('Vui lòng đăng nhập để thay đổi logo');
+      return;
+    }
+
+    setUploadingLogo(true);
+    try {
+      const updatedCompany = await companyService.updateCompanyLogo(company.id, file);
+
+      // Notify parent component
+      if (onCompanyUpdate) {
+        onCompanyUpdate(updatedCompany);
+      }
+
+      // Show success message (could use toast instead)
+      console.log('Logo uploaded successfully');
+    } catch (error) {
+      console.error('Logo upload failed:', error);
+      alert(`Upload failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw error; // Re-throw so CompanyAvatar knows it failed
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
   if (!company) return null;
 
   const formatDate = (date: Date) => {
@@ -198,29 +229,44 @@ export const CompanyDrawer: React.FC<CompanyDrawerProps> = ({
 
   // Company Info component (shared between views)
   const companyInfo = (
-    <div className="flex items-start gap-4 border-b pb-5">
-      <CompanyAvatar name={company.name} logo={company.logo} size="lg" className="shadow-sm" />
-      <div className="flex-1 min-w-0">
-        <h2 className="text-xl font-semibold tracking-tight">{company.name}</h2>
-        {company.industry && (
-          <Badge variant="secondary" className="mt-2">
-            {company.industry}
-          </Badge>
-        )}
-        {company.location && (
-          <p className="mt-2 flex items-center text-sm text-muted-foreground">
-            <svg className="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            {company.location}
-          </p>
-        )}
-        {company.description && (
-          <p className="mt-3 line-clamp-3 text-sm text-muted-foreground">
-            {company.description}
-          </p>
-        )}
+    <div className="space-y-4">
+      <div className="flex items-start gap-4 border-b pb-5">
+        <CompanyAvatar
+          name={company.name}
+          logo={company.logo}
+          size="lg"
+          className="shadow-sm"
+          editable={isAuthenticated}
+          onUpload={handleLogoUpload}
+          isUploading={uploadingLogo}
+        />
+        <div className="flex-1 min-w-0">
+          <h2 className="text-xl font-semibold tracking-tight">{company.name}</h2>
+          {company.industry && (
+            <Badge variant="secondary" className="mt-2">
+              {company.industry}
+            </Badge>
+          )}
+          {company.location && (
+            <p className="mt-2 flex items-center text-sm text-muted-foreground">
+              <svg className="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              {company.location}
+            </p>
+          )}
+          {company.description && (
+            <p className="mt-3 line-clamp-3 text-sm text-muted-foreground">
+              {company.description}
+            </p>
+          )}
+          {isAuthenticated && (
+            <p className="mt-2 text-xs text-muted-foreground">
+              {uploadingLogo ? 'Đang tải logo...' : 'Nhấn vào logo để thay đổi'}
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );

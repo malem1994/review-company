@@ -1,5 +1,26 @@
 // Type definitions for the Company Review application
 
+// User model (renamed from profiles)
+export interface User {
+  id: string;
+  email: string;
+  displayName: string;
+  avatarUrl?: string;
+  roleId?: string;
+  role?: Role; // Optional joined role
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Role model
+export interface Role {
+  id: string;
+  name: string; // 'admin', 'user', etc.
+  description?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 // Company model
 export interface Company {
   id: string;

@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { useCompanyStore } from '../store';
 import { useUserStore } from '../store/userStore';
 import { Company } from '../types';
+import { companyService } from '../services/api';
 
 interface ToastMessage {
   id: number;
@@ -25,12 +26,17 @@ export default function HomePage() {
   const [sortBy, setSortBy] = useState<'rating' | 'name' | 'reviews'>('rating');
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [toast, setToast] = useState<ToastMessage | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   // Initialize Supabase Auth listener
   useEffect(() => {
     const unsubscribe = _init();
     return unsubscribe;
   }, [_init]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     fetchCompanies();
@@ -100,6 +106,13 @@ export default function HomePage() {
 
   const visibleCompanies = filteredCompanies();
 
+  const handleCompanyUpdate = (updatedCompany: Company) => {
+    // Update selected company
+    setSelectedCompany(updatedCompany);
+    // Update in store
+    useCompanyStore.getState().updateCompany(updatedCompany);
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       {toast && (
@@ -149,7 +162,7 @@ export default function HomePage() {
             </div>
 
             <div className="flex shrink-0 items-center gap-3">
-              {authLoading ? (
+              {authLoading || !mounted ? (
                 <div className="h-8 w-8 animate-pulse rounded-md bg-muted" />
               ) : isAuthenticated && user ? (
                 <>
@@ -300,6 +313,7 @@ export default function HomePage() {
           setSelectedCompany(null);
           setShowLoginModal(true);
         }}
+        onCompanyUpdate={handleCompanyUpdate}
       />
 
       {/* Login Modal */}
